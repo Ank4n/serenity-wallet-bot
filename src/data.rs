@@ -1,64 +1,48 @@
-extern crate google_sheets4 as sheets4;
-extern crate hyper;
-extern crate hyper_rustls;
-extern crate yup_oauth2 as oauth2;
-use sheets4::api::ValueRange;
-use sheets4::Error;
-use sheets4::Sheets;
-use std::default::Default;
+use std::io::Error as Stderr;
 
-async fn something() {
-    let secret = yup_oauth2::read_application_secret("google_credentials.json")
+pub struct DbClient {
+    database: sqlx::SqlitePool,
+}
+
+impl DbClient {
+    pub async fn insert(
+        &self,
+        user_id: String,
+        user_name: String,
+        address_type: String,
+        address: String,
+        roles: String,
+        avatar: String,
+    ) -> Option<Stderr> {
+
+        sqlx::query!(
+            "INSERT OR REPLACE INTO users (user_id, user_name, address_type, address, roles, avatar, create_date, update_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
+             user_id, user_name, address_type, address, roles, avatar)
+        .execute(&self.database)
         .await
-        .expect("client secret could not be read");
+        .unwrap();
 
-    let auth = yup_oauth2::InstalledFlowAuthenticator::builder(
-        secret,
-        yup_oauth2::InstalledFlowReturnMethod::HTTPRedirect,
-    )
-    .build()
-    .await
-    .unwrap();
-
-    let mut hub = Sheets::new(
-        hyper::Client::builder().build(hyper_rustls::HttpsConnector::with_native_roots()),
-        auth,
-    );
-
-    let mut req = ValueRange::default();
-
-    let result = hub
-        .spreadsheets()
-        .values_append(req, "spreadsheetId", "range")
-        .value_input_option("no")
-        .response_value_render_option("ipsum")
-        .response_date_time_render_option("voluptua.")
-        .insert_data_option("At")
-        .include_values_in_response(false)
-        .doit()
-        .await;
-
-    match result {
-        Err(e) => match e {
-            Error::HttpError(_)
-            | Error::Io(_)
-            | Error::MissingAPIKey
-            | Error::MissingToken(_)
-            | Error::Cancelled
-            | Error::UploadSizeLimitExceeded(_, _)
-            | Error::Failure(_)
-            | Error::BadRequest(_)
-            | Error::FieldClash(_)
-            | Error::JsonDecodeError(_, _) => println!("{}", e),
-        },
-        Ok(res) => println!("Success: {:?}", res),
+        None
     }
 }
-pub fn save(
-    username: &String,
-    user_id: &String,
-    wallet_type: &String,
-    wallet_address: &String,
-) -> Option<Error> {
-    None
+
+pub async fn init(filename: String) -> DbClient {
+    // Initiate a connection to the database file, creating the file if required.
+    let database = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(filename)
+                .create_if_missing(true),
+        )
+        .await
+        .expect("Couldn't connect to database");
+
+    // Run migrations, which updates the database's schema to the latest version.
+    sqlx::migrate!("./migrations")
+        .run(&database)
+        .await
+        .expect("Couldn't run database migrations");
+
+    DbClient { database }
 }

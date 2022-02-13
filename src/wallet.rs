@@ -1,3 +1,4 @@
+use std::io::Error as Stderr;
 use std::str::FromStr;
 
 use serenity::model::interactions::application_command::{
@@ -5,10 +6,15 @@ use serenity::model::interactions::application_command::{
 };
 use sp_core::crypto::Ss58Codec;
 
-use ethereum_types;
 pub use crate::data;
+use ethereum_types;
 
-pub fn register(command: &ApplicationCommandInteraction) -> Result<(), String> {
+use self::data::DbClient;
+
+pub async fn register(
+    command: &ApplicationCommandInteraction,
+    db_client: &DbClient,
+) -> Result<(), String> {
     let address_type = command
         .data
         .options
@@ -25,11 +31,17 @@ pub fn register(command: &ApplicationCommandInteraction) -> Result<(), String> {
         .resolved
         .as_ref()
         .expect("Expected address object");
-
     if let ApplicationCommandInteractionDataOptionValue::String(address_type) = address_type {
         if let ApplicationCommandInteractionDataOptionValue::String(address) = address {
             match verify(address_type, address) {
-                Ok(_) => match data::save(&String::from("name"), &String::from("id"), address_type, address) {
+                Ok(_) => match upsert(
+                    db_client,
+                    command,
+                    address_type.to_string(),
+                    address.to_string(),
+                )
+                .await
+                {
                     None => return Ok(()),
                     Some(_) => return Err("Could not save the record".to_string()),
                 },
@@ -39,6 +51,30 @@ pub fn register(command: &ApplicationCommandInteraction) -> Result<(), String> {
     }
 
     Err("Something went wrong while processing the command.".to_string())
+}
+
+async fn upsert(
+    db_client: &DbClient,
+    command: &ApplicationCommandInteraction,
+    address_type: String,
+    address: String,
+) -> Option<Stderr> {
+    let roles = &command
+        .member
+        .as_ref()
+        .expect("Expected the bot to be in guild")
+        .roles;
+    let avatar = &command.user.avatar_url().unwrap_or_default();
+    db_client
+        .insert(
+            command.user.id.to_string(),
+            command.user.name.to_string(),
+            address_type.to_string(),
+            address.to_string(),
+            format!("{:?}", roles),
+            avatar.to_string(),
+        )
+        .await
 }
 
 fn verify(address_type: &String, address: &String) -> Result<(), String> {

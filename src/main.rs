@@ -9,16 +9,20 @@ use serenity::{
     },
     prelude::*,
 };
-mod wallet;
+
+use wallet::data::DbClient;
 pub mod data;
-struct Handler;
+mod wallet;
+struct Handler {
+    db_client: DbClient,
+}
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             let content = match command.data.name.as_str() {
-                "wallet" => match wallet::register(&command) {
+                "wallet" => match wallet::register(&command, &self.db_client).await {
                     Ok(_) => "Your details have been recorded.".to_string(),
                     Err(e) => e,
                 },
@@ -83,26 +87,22 @@ impl EventHandler for Handler {
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
-    // Configure the client with your Discord bot token in the environment.
     let token = dotenv::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    let db_file = dotenv::var("DB_FILE").expect("Expected DB File in the environment");
+    let db_client = data::init(db_file).await;
+    let handler = Handler { db_client };
 
-    // The Application Id is usually the Bot User Id.
     let application_id: u64 = dotenv::var("APPLICATION_ID")
         .expect("Expected an application id in the environment")
         .parse()
         .expect("application id is not a valid id");
 
-    // Build our client.
     let mut client = Client::builder(token)
-        .event_handler(Handler)
+        .event_handler(handler)
         .application_id(application_id)
         .await
         .expect("Error creating client");
 
-    // Finally, start a single shard, and start listening to events.
-    //
-    // Shards will automatically attempt to reconnect, and will perform
-    // exponential backoff until it reconnects.
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
     }

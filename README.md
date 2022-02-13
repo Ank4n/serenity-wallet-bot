@@ -2,10 +2,10 @@
 
 ##### Discord Configuration
 Copy the file `.env.sample`, rename it as `.env` and add the values in the placeholder.
-
-##### Google Sheets API Credentials
-Not implemented yet.
-
+##### Migrations
+- Install sqlx cli `cargo install sqlx-cli`
+- If you need to add a new migration, use `sqlx migrate add <name>`
+- Setup database before running bot `sqlx database setup`
 ##### Running the bot
 - Make sure cargo and rust up are installed and then run the following command from project directory.
 `cargo run`
