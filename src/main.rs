@@ -10,7 +10,7 @@ use serenity::{
     prelude::*,
 };
 mod wallet;
-
+pub mod data;
 struct Handler;
 
 #[async_trait]

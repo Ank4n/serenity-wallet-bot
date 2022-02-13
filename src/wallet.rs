@@ -6,6 +6,7 @@ use serenity::model::interactions::application_command::{
 use sp_core::crypto::Ss58Codec;
 
 use ethereum_types;
+pub use crate::data;
 
 pub fn register(command: &ApplicationCommandInteraction) -> Result<(), String> {
     let address_type = command
@@ -28,7 +29,10 @@ pub fn register(command: &ApplicationCommandInteraction) -> Result<(), String> {
     if let ApplicationCommandInteractionDataOptionValue::String(address_type) = address_type {
         if let ApplicationCommandInteractionDataOptionValue::String(address) = address {
             match verify(address_type, address) {
-                Ok(_) => return Ok(()),
+                Ok(_) => match data::save(&String::from("name"), &String::from("id"), address_type, address) {
+                    None => return Ok(()),
+                    Some(_) => return Err("Could not save the record".to_string()),
+                },
                 Err(e) => return Err(e),
             }
         }
@@ -41,7 +45,7 @@ fn verify(address_type: &String, address: &String) -> Result<(), String> {
     if address_type.eq("Moonriver") {
         return check_h160(address);
     } else if address_type.eq("Kusama") {
-      return check_ss58(address);
+        return check_ss58(address);
     }
     Err("The provided wallet address is invalid.".to_string())
 }
@@ -60,6 +64,6 @@ fn check_ss58(address: &String) -> Result<(), String> {
     if let Ok(_) = sp_core::crypto::AccountId32::from_ss58check(&address) {
         return Ok(());
     }
-    
+
     return Err("Invalid ss58 address provided".to_string());
 }

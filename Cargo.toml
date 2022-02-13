@@ -6,9 +6,21 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serenity = { version = "0.10.10", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "unstable_discord_api"] }
-tokio = {version = "1.16.1", features = ["macros", "rt-multi-thread"]}
+serenity = { version = "0.10.10", default-features = false, features = [
+    "client",
+    "gateway",
+    "rustls_backend",
+    "model",
+    "unstable_discord_api",
+] }
+tokio = { version = "1.16.1", features = ["macros", "rt-multi-thread"] }
 dotenv = "0.15.0"
 hex = "0.4.3"
 sp-core = "5.0.0"
 ethereum-types = "0.13.1"
+google-sheets4 = "*"
+hyper = "^0.14"
+hyper-rustls = "^0.22"
+serde = "^1.0"
+serde_json = "^1.0"
+yup-oauth2 = "^5.0"
