@@ -18,5 +18,7 @@ tokio = { version = "1.16.1", features = ["macros", "rt-multi-thread"] }
 dotenv = "0.15.0"
 hex = "0.4.3"
 sp-core = "5.0.0"
+schnorrkel = "0.10.2"
 ethereum-types = "0.13.1"
+hex-literal = "0.3.4"
 sqlx = { version = "0.5.7", features = ["runtime-tokio-rustls", "sqlite", "offline"] }

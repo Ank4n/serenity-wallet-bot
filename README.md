@@ -10,3 +10,7 @@ Copy the file `.env.sample`, rename it as `.env` and add the values in the place
 - Make sure cargo and rust up are installed and then run the following command from project directory.
 `cargo run`
 - When adding bot to the server, you need to add `application.command` scope to it. You might also have to give the bot access to show application commands in the channel.
+
+##### Database
+- Connect to database `sqlite3 database.sqlite`
+- Run sql queries

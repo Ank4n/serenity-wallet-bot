@@ -17,14 +17,15 @@ struct Handler {
     db_client: DbClient,
 }
 
+const GUIDE: &str = "<some link>";
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             let content = match command.data.name.as_str() {
-                "wallet" => match wallet::register(&command, &self.db_client).await {
+                "register_ksm_movr" => match wallet::register(&command, &self.db_client).await {
                     Ok(_) => "Your details have been recorded.".to_string(),
-                    Err(e) => e,
+                    Err(e) => format!("{}. Follow the guide here {}", e, GUIDE)
                 },
                 _ => "not implemented :(".to_string(),
             };
@@ -53,27 +54,35 @@ impl EventHandler for Handler {
         );
 
         let commands = GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
-            commands.create_application_command(|command| {
-                command
-                    .name("wallet")
-                    .description("Register user wallet")
-                    .create_option(|option| {
-                        option
-                            .name("type")
-                            .description("Type of wallet")
-                            .kind(ApplicationCommandOptionType::String)
-                            .required(true)
-                            .add_string_choice("Moonriver", "Moonriver")
-                            .add_string_choice("Kusama", "Kusama")
-                    })
-                    .create_option(|option| {
-                        option
-                            .name("address")
-                            .description("The wallet address")
-                            .kind(ApplicationCommandOptionType::String)
-                            .required(true)
-                    })
-            })
+            commands
+                .create_application_command(|command| {
+                    command
+                        .name("register_ksm_movr")
+                        .description("Register and verify wallet")
+                        .create_option(|option| {
+                            option
+                                .name("kusama_address")
+                                .description("Kusama wallet address")
+                                .kind(ApplicationCommandOptionType::String)
+                                .required(true)
+                        })
+                        .create_option(|option| {
+                            option
+                                .name("moonriver_address")
+                                .description("Moonriver wallet address")
+                                .kind(ApplicationCommandOptionType::String)
+                                .required(true)
+                        })
+                        .create_option(|option| {
+                            option
+                                .name("signature")
+                                .description(
+                                    "MOVR address signed as a message with your KSM wallet",
+                                )
+                                .kind(ApplicationCommandOptionType::String)
+                                .required(true)
+                        })
+                })
         })
         .await;
 

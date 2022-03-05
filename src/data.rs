@@ -8,16 +8,17 @@ impl DbClient {
     pub async fn insert(
         &self,
         user_id: String,
+        user_tag: String,
         user_name: String,
-        address_type: String,
-        address: String,
+        ksm_address: String,
+        movr_address: String,
         roles: String,
         avatar: String,
     ) -> Option<Stderr> {
 
         sqlx::query!(
-            "INSERT OR REPLACE INTO users (user_id, user_name, address_type, address, roles, avatar, create_date, update_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
-             user_id, user_name, address_type, address, roles, avatar)
+            "INSERT OR REPLACE INTO users (user_id, user_tag, user_name, ksm_address, movr_address, roles, avatar, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
+             user_id, user_tag, user_name, ksm_address, movr_address, roles, avatar)
         .execute(&self.database)
         .await
         .unwrap();
