@@ -1,7 +1,7 @@
 use schnorrkel::keys::*;
 use schnorrkel::sign::Signature;
 use schnorrkel::signing_context;
-use std::str::FromStr;
+use std::{str::FromStr, io::Stderr};
 
 use serenity::model::interactions::application_command::{
     ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
@@ -13,7 +13,7 @@ use ethereum_types;
 
 use self::data::DbClient;
 
-pub async fn register(
+pub async fn sign(
     command: &ApplicationCommandInteraction,
     db_client: &DbClient,
 ) -> Result<(), String> {
@@ -36,7 +36,7 @@ pub async fn register(
         Err(e) => return Err(e),
     }
 
-    match upsert_ksm_movr_link(db_client, command, ksm, movr).await {
+    match insert_signed(db_client, command, ksm, movr).await {
         Ok(_) => (),
         Err(_) => {
             return Err("Something went wrong while trying to record your details".to_string())
@@ -44,6 +44,47 @@ pub async fn register(
     }
 
     Ok(())
+}
+
+pub async fn register(
+    command: &ApplicationCommandInteraction,
+    db_client: &DbClient,
+) -> Result<(), String> {
+    let address_type = command
+        .data
+        .options
+        .get(0)
+        .expect("Expected wallet type")
+        .resolved
+        .as_ref()
+        .expect("Expected wallet type object");
+    let address = command
+        .data
+        .options
+        .get(1)
+        .expect("Expected address")
+        .resolved
+        .as_ref()
+        .expect("Expected address object");
+    if let ApplicationCommandInteractionDataOptionValue::String(address_type) = address_type {
+        if let ApplicationCommandInteractionDataOptionValue::String(address) = address {
+            match verify(address_type, address) {
+                Ok(_) => match insert_non_signed(
+                    db_client,
+                    command,
+                    address_type.to_string(),
+                    address.to_string(),
+                ).await
+                {
+                    None => return Ok(()),
+                    Some(_) => return Err("Could not save the record".to_string()),
+                },
+                Err(e) => return Err(e),
+            }
+        }
+    }
+
+    Err("Something went wrong while processing the command.".to_string())
 }
 
 fn extract_option_str(command: &ApplicationCommandInteraction, index: usize) -> Option<String> {
@@ -109,7 +150,7 @@ fn test_signature() {
     assert!(check_signature(ss58_address, h160_add, signature).is_ok());
 }
 
-async fn upsert_ksm_movr_link(
+async fn insert_signed(
     db_client: &DbClient,
     command: &ApplicationCommandInteraction,
     ksm: String,
@@ -122,7 +163,7 @@ async fn upsert_ksm_movr_link(
         .roles;
     let avatar = &command.user.avatar_url().unwrap_or_default();
     let success = db_client
-        .insert(
+        .insert_signed(
             command.user.id.to_string(),
             command.user.tag(),
             command.user.name.to_string(),
@@ -139,6 +180,30 @@ async fn upsert_ksm_movr_link(
     }
 
     Err("Could not save wallet details".to_string())
+}
+
+async fn insert_non_signed(
+    db_client: &DbClient,
+    command: &ApplicationCommandInteraction,
+    address_type: String,
+    address: String,
+) -> Option<Stderr> {
+    let roles = &command
+        .member
+        .as_ref()
+        .expect("Expected the bot to be in guild")
+        .roles;
+    let avatar = &command.user.avatar_url().unwrap_or_default();
+    db_client
+        .insert_non_signed(
+            command.user.tag(),
+            command.user.name.to_string(),
+            address_type.to_string(),
+            address.to_string(),
+            format!("{:?}", roles),
+            avatar.to_string(),
+        )
+        .await
 }
 
 fn verify(address_type: &String, address: &String) -> Result<(), String> {

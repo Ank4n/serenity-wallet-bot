@@ -23,9 +23,13 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             let content = match command.data.name.as_str() {
-                "register_ksm_movr" => match wallet::register(&command, &self.db_client).await {
+                "sign" => match wallet::sign(&command, &self.db_client).await {
                     Ok(_) => "Your details have been recorded.".to_string(),
-                    Err(e) => format!("{}. Follow the guide here {}", e, GUIDE)
+                    Err(e) => format!("{}. Follow the guide here {}", e, GUIDE),
+                },
+                "wallet" => match wallet::register(&command, &self.db_client).await {
+                    Ok(_) => "Your details have been recorded.".to_string(),
+                    Err(e) => e,
                 },
                 _ => "not implemented :(".to_string(),
             };
@@ -57,7 +61,7 @@ impl EventHandler for Handler {
             commands
                 .create_application_command(|command| {
                     command
-                        .name("register_ksm_movr")
+                        .name("sign")
                         .description("Register and verify wallet")
                         .create_option(|option| {
                             option
@@ -79,6 +83,27 @@ impl EventHandler for Handler {
                                 .description(
                                     "MOVR address signed as a message with your KSM wallet",
                                 )
+                                .kind(ApplicationCommandOptionType::String)
+                                .required(true)
+                        })
+                })
+                .create_application_command(|command| {
+                    command
+                        .name("wallet")
+                        .description("Register user wallet")
+                        .create_option(|option| {
+                            option
+                                .name("type")
+                                .description("Type of wallet")
+                                .kind(ApplicationCommandOptionType::String)
+                                .required(true)
+                                .add_string_choice("Moonriver", "Moonriver")
+                                .add_string_choice("Kusama", "Kusama")
+                        })
+                        .create_option(|option| {
+                            option
+                                .name("address")
+                                .description("The wallet address")
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
                         })
