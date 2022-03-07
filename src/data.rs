@@ -18,7 +18,7 @@ impl DbClient {
     ) -> Option<Stderr> {
 
         sqlx::query!(
-            "INSERT OR REPLACE INTO signed (user_id, user_tag, ksm_address, movr_address, roles, avatar, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
+            "INSERT OR REPLACE INTO signed (user_id, user_tag, ksm_address, movr_address, roles, avatar, create_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))",
              user_id, user_tag, ksm_address, movr_address, roles, avatar)
         .execute(&self.database)
         .await
