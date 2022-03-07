@@ -196,8 +196,8 @@ async fn insert_non_signed(
     let avatar = &command.user.avatar_url().unwrap_or_default();
     db_client
         .insert_non_signed(
+            command.user.id.to_string(),
             command.user.tag(),
-            command.user.name.to_string(),
             address_type.to_string(),
             address.to_string(),
             format!("{:?}", roles),
