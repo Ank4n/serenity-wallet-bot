@@ -166,7 +166,6 @@ async fn insert_signed(
         .insert_signed(
             command.user.id.to_string(),
             command.user.tag(),
-            command.user.name.to_string(),
             ksm,
             format!("0x{}", movr),
             format!("{:?}", roles),

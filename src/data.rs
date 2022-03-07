@@ -11,7 +11,6 @@ impl DbClient {
         &self,
         user_id: String,
         user_tag: String,
-        user_name: String,
         ksm_address: String,
         movr_address: String,
         roles: String,
@@ -19,8 +18,8 @@ impl DbClient {
     ) -> Option<Stderr> {
 
         sqlx::query!(
-            "INSERT OR REPLACE INTO signed (user_id, user_tag, user_name, ksm_address, movr_address, roles, avatar, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
-             user_id, user_tag, user_name, ksm_address, movr_address, roles, avatar)
+            "INSERT OR REPLACE INTO signed (user_id, user_tag, ksm_address, movr_address, roles, avatar, create_date) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
+             user_id, user_tag, ksm_address, movr_address, roles, avatar)
         .execute(&self.database)
         .await
         .unwrap();
@@ -31,7 +30,7 @@ impl DbClient {
     pub async fn insert_non_signed(
         &self,
         user_id: String,
-        user_name: String,
+        user_tag: String,
         address_type: String,
         address: String,
         roles: String,
@@ -39,8 +38,8 @@ impl DbClient {
     ) -> Option<Stderr> {
 
         sqlx::query!(
-            "INSERT OR REPLACE INTO users (user_id, user_name, address_type, address, roles, avatar, create_date, update_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
-             user_id, user_name, address_type, address, roles, avatar)
+            "INSERT OR REPLACE INTO users (user_id, user_tag, address_type, address, roles, avatar, create_date, update_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
+             user_id, user_tag, address_type, address, roles, avatar)
         .execute(&self.database)
         .await
         .unwrap();
