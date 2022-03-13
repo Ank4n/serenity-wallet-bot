@@ -1,7 +1,7 @@
 use schnorrkel::keys::*;
 use schnorrkel::sign::Signature;
 use schnorrkel::signing_context;
-use std::{str::FromStr, io::Stderr};
+use std::{io::Stderr, str::FromStr};
 
 use serenity::model::interactions::application_command::{
     ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
@@ -74,7 +74,8 @@ pub async fn register(
                     command,
                     address_type.to_string(),
                     address.to_string(),
-                ).await
+                )
+                .await
                 {
                     None => return Ok(()),
                     Some(_) => return Err("Could not save the record".to_string()),
@@ -104,11 +105,36 @@ fn extract_option_str(command: &ApplicationCommandInteraction, index: usize) -> 
     None
 }
 
+const MSG_WRAP_PREFIX: &str = "<Bytes>";
+const MSG_WRAP_POSTFIX: &str = "</Bytes>";
+
 fn check_signature(ss58_add: &String, h160_add: &String, signature: &String) -> Result<(), String> {
-    let msg = format!("<Bytes>{}</Bytes>", h160_add);
+    let h160_add = if h160_add.starts_with("0x") {
+        h160_add[2..].to_string()
+    } else {
+        h160_add.to_string()
+    };
+
+    let signature = if signature.starts_with("0x") {
+        signature[2..].to_string()
+    } else {
+        signature.to_string()
+    };
+
+    let mut unwrapped_msg: Vec<u8> = match hex::FromHex::from_hex(&h160_add) {
+        Ok(m) => m,
+        Err(_) => return Err("Not a valid hex message".to_string()),
+    };
+
+    let mut msg = MSG_WRAP_PREFIX.as_bytes().to_vec();
+    let mut msg_postfix = MSG_WRAP_POSTFIX.as_bytes().to_vec();
+
+    msg.append(&mut unwrapped_msg);
+    msg.append(&mut msg_postfix);
+
     let context = signing_context(b"substrate");
 
-    match check_h160(&format!("0x{}", h160_add)) {
+    match check_h160(&format!("0x{}", &h160_add)) {
         Ok(_) => (),
         Err(_) => return Err("Movr address is not valid".to_string()),
     }
@@ -135,19 +161,10 @@ fn check_signature(ss58_add: &String, h160_add: &String, signature: &String) -> 
         }
     };
 
-    match pk.verify(context.bytes(msg.as_bytes()), &sig) {
+    match pk.verify(context.bytes(&msg), &sig) {
         Ok(_) => return Ok(()),
         Err(_) => return Err("Signature could not be verified.".to_string()),
     }
-}
-
-#[test]
-fn test_signature() {
-    let ss58_address = &"Fk5WEp12UPQJK7ibjA1SjryQUJHDXYJ1sqavX7kUHzi4nbU".to_string();
-    let h160_add = &"b794f5ea0ba39494ce839613fffba74279579268".to_string();
-    let signature = &"f0148a9053ad65d80b39b5c8d6957359511cadfe872fabbb3cb14829bd4324081e3f7cf405c3aa4774dbf50dd7e2dcb9a227298f386a331659fbc9b9d2fe478d".to_string();
-
-    assert!(check_signature(ss58_address, h160_add, signature).is_ok());
 }
 
 async fn insert_signed(
@@ -218,9 +235,8 @@ fn check_h160(address: &String) -> Result<(), String> {
     match ethereum_types::H160::from_str(address) {
         Ok(_) => return Ok(()),
         Err(e) => {
-            print!("Error while saving moonriver address: {}", e.to_string());
-            // return Err("Invalid H160 address provided".to_string());
-            return Ok(());
+            print!("Error while parsing moonriver address: {}", e.to_string());
+            return Err("Invalid H160 address provided".to_string());
         }
     }
 }
@@ -231,4 +247,30 @@ fn check_ss58(address: &String) -> Result<(), String> {
     }
 
     return Err("Invalid ss58 address provided".to_string());
+}
+
+#[test]
+fn test_signature_unstripped_hex() {
+    let ss58_address = &"14AkzFjCFtdwzCJnnfPxgwL87W1h7AHFdzjKh9q9YaojWFxx".to_string();
+    let h160_add = &"0xb794f5ea0ba39494ce839613fffba74279579268".to_string();
+    let signature = &"0xc67b20ee54a52ba6636e8f41f7aa984a47916ef17a119d441d29a97ac6ebfa6921f649cd3a02084df393a6614f3ac699aca98bdb5ccf5504dd74fd6e3f6dd48a".to_string();
+    let check = check_signature(ss58_address, h160_add, signature);
+    assert!(check.is_ok(), "err: {}", check.unwrap_err());
+}
+
+#[test]
+fn test_signature_stripped_hex() {
+    let ss58_address = &"14AkzFjCFtdwzCJnnfPxgwL87W1h7AHFdzjKh9q9YaojWFxx".to_string();
+    let h160_add = &"b794f5ea0ba39494ce839613fffba74279579268".to_string();
+    let signature = &"c67b20ee54a52ba6636e8f41f7aa984a47916ef17a119d441d29a97ac6ebfa6921f649cd3a02084df393a6614f3ac699aca98bdb5ccf5504dd74fd6e3f6dd48a".to_string();
+    let check = check_signature(ss58_address, h160_add, signature);
+    assert!(check.is_ok(), "err: {}", check.unwrap_err());
+}
+#[test]
+fn test_signature_wrong_signature() {
+    let ss58_address = &"14AkzFjCFtdwzCJnnfPxgwL87W1h7AHFdzjKh9q9YaojWFxx".to_string();
+    let h160_add = &"b794f5ea0ba39494ce839613fffba74279579268".to_string();
+    let signature = &"367b20ee54a52ba6636e8f41f7aa984a47916ef17a119d441d29a97ac6ebfa6921f649cd3a02084df393a6614f3ac699aca98bdb5ccf5504dd74fd6e3f6dd48a".to_string();
+    let check = check_signature(ss58_address, h160_add, signature);
+    assert!(check.is_err(), "Signature was expected to fail but passed");
 }
