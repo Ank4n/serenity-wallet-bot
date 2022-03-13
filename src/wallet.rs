@@ -3,23 +3,59 @@ use schnorrkel::sign::Signature;
 use schnorrkel::signing_context;
 use std::{io::Stderr, str::FromStr};
 
-use serenity::model::interactions::application_command::{
-    ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
+use serenity::{
+    client::Context,
+    model::{
+        interactions::application_command::{
+            ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
+        },
+    },
 };
 use sp_core::crypto::{AccountId32, Ss58Codec};
 
 pub use crate::data;
+use crate::Handler;
 use ethereum_types;
 
 use self::data::DbClient;
 
 pub async fn sign(
+    ctx: &Context,
     command: &ApplicationCommandInteraction,
-    db_client: &DbClient,
+    handler: &Handler,
 ) -> Result<(), String> {
     let ksm = extract_option_str(command, 0).unwrap();
     let movr = extract_option_str(command, 1).unwrap();
     let signature = extract_option_str(command, 2).unwrap();
+
+    let member = &command
+    .member
+    .as_ref()
+    .expect("Expected user to be member of guild");
+    let roles = command
+        .guild_id
+        .expect("Expected command to come from the guild")
+        .roles(&ctx.http)
+        .await
+        .unwrap();
+    let user_roles = &member.roles;
+    let user_roles = user_roles.iter().map(|role_id| {
+        &roles
+            .get(role_id)
+            .expect("expected role id in the guild")
+            .name
+    });
+
+    let filtered_roles = user_roles
+        .to_owned()
+        .filter(|&role_name| handler.is_valid_role(&role_name))
+        .collect::<Vec<&std::string::String>>();
+
+    let user_roles = user_roles.collect::<Vec<&std::string::String>>();
+
+    if filtered_roles.len() != 1 {
+        return Err("You do not have proper role to use this command.".to_string());
+    }
 
     match check_ss58(&ksm) {
         Ok(_) => (),
@@ -36,7 +72,7 @@ pub async fn sign(
         Err(e) => return Err(e),
     }
 
-    match insert_signed(db_client, command, ksm, movr).await {
+    match insert_signed(&handler.db_client(), command, ksm, movr, user_roles).await {
         Ok(_) => (),
         Err(_) => {
             return Err("Something went wrong while trying to record your details".to_string())
@@ -172,12 +208,8 @@ async fn insert_signed(
     command: &ApplicationCommandInteraction,
     ksm: String,
     movr: String,
+    roles: Vec<&String>,
 ) -> Result<(), String> {
-    let roles = &command
-        .member
-        .as_ref()
-        .expect("Expected the bot to be in guild")
-        .roles;
     let avatar = &command.user.avatar_url().unwrap_or_default();
     let success = db_client
         .insert_signed(

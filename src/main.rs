@@ -2,10 +2,10 @@ use serenity::{
     async_trait,
     model::{
         gateway::Ready,
-        id::GuildId,
+        id::{GuildId},
         interactions::{
             application_command::ApplicationCommandOptionType, Interaction, InteractionResponseType,
-        },
+        }, 
     },
     prelude::*,
 };
@@ -13,8 +13,10 @@ use serenity::{
 use wallet::data::DbClient;
 pub mod data;
 mod wallet;
-struct Handler {
+pub struct Handler {
     db_client: DbClient,
+    pre_role: String,
+    post_role: String
 }
 
 // const ERROR_POSTFIX: &str = ". Follow the guide here <some link>";
@@ -24,7 +26,7 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             let content = match command.data.name.as_str() {
-                "sign" => match wallet::sign(&command, &self.db_client).await {
+                "sign" => match wallet::sign(&ctx, &command, &self).await {
                     Ok(_) => "Your details have been recorded.".to_string(),
                     Err(e) => format!("{} {}", e, ERROR_POSTFIX),
                 },
@@ -112,9 +114,15 @@ impl EventHandler for Handler {
         })
         .await;
 
+        let roles = guild_id.roles(&ctx.http).await.unwrap();
         println!(
             "I now have the following guild slash commands: {:#?}",
             commands
+        );
+
+        println!(
+            "I found the following roles: {:#?}",
+            roles
         );
     }
 }
@@ -125,7 +133,12 @@ async fn main() {
     let token = dotenv::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let db_file = dotenv::var("DB_FILE").expect("Expected DB File in the environment");
     let db_client = data::init(db_file).await;
-    let handler = Handler { db_client };
+    // user needs this role before they can use /sign command
+    let pre_role = dotenv::var("PRE_ROLE").expect("Expected pre role in the environment");
+    // user is assigned this role after successfully using the /sign command
+    let post_role = dotenv::var("POST_ROLE").expect("Expected post role in the environment");
+
+    let handler = Handler { db_client, pre_role, post_role };
 
     let application_id: u64 = dotenv::var("APPLICATION_ID")
         .expect("Expected an application id in the environment")
@@ -140,5 +153,19 @@ async fn main() {
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
+    }
+}
+
+impl Handler {
+    fn db_client(&self) -> &DbClient {
+        &self.db_client
+    }
+    
+    fn is_valid_role(&self, user_role: &str) -> bool {
+        user_role.eq(&self.pre_role)
+    }
+
+    fn post_role(&self) -> &str {
+        &self.post_role
     }
 }
