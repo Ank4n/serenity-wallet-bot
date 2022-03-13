@@ -17,7 +17,8 @@ struct Handler {
     db_client: DbClient,
 }
 
-const GUIDE: &str = "<some link>";
+// const ERROR_POSTFIX: &str = ". Follow the guide here <some link>";
+const ERROR_POSTFIX: &str = "";
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -25,7 +26,7 @@ impl EventHandler for Handler {
             let content = match command.data.name.as_str() {
                 "sign" => match wallet::sign(&command, &self.db_client).await {
                     Ok(_) => "Your details have been recorded.".to_string(),
-                    Err(e) => format!("{}. Follow the guide here {}", e, GUIDE),
+                    Err(e) => format!("{} {}", e, ERROR_POSTFIX),
                 },
                 "wallet" => match wallet::register(&command, &self.db_client).await {
                     Ok(_) => "Your details have been recorded.".to_string(),
