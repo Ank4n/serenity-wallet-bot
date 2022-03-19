@@ -123,12 +123,12 @@ pub async fn register(
                 .expect("expected role id in the guild")
                 .name
         });
-        println!("User roles: {:?}", user_roles);
+       // println!("User roles: {:?}", user_roles);
         let filtered_roles = user_roles
             .to_owned()
             .filter(|&role_name| handler.is_valid_role(&role_name))
             .collect::<Vec<&std::string::String>>();
-        println!("Filtered roles: {:?}", filtered_roles);
+        //println!("Filtered roles: {:?}", filtered_roles);
         let user_roles = user_roles.collect::<Vec<&std::string::String>>();
     
         if filtered_roles.len() != 1 {
