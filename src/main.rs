@@ -75,8 +75,8 @@ impl EventHandler for Handler {
                         })
                         .create_option(|option| {
                             option
-                                .name("moonriver_address")
-                                .description("Moonriver wallet address")
+                                .name("moonbeam_address")
+                                .description("Moonbeam wallet address")
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
                         })
@@ -100,7 +100,7 @@ impl EventHandler for Handler {
                                 .description("Type of wallet")
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
-                                .add_string_choice("Moonriver", "Moonriver")
+                                .add_string_choice("Moonbeam", "Moonbeam")
                                 .add_string_choice("Kusama", "Kusama")
                         })
                         .create_option(|option| {

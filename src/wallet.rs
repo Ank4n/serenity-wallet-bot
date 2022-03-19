@@ -289,7 +289,7 @@ async fn insert_non_signed(
 }
 
 fn verify(address_type: &String, address: &String) -> Result<(), String> {
-    if address_type.eq("Moonriver") {
+    if address_type.eq("Moonbeam") {
         return check_h160(address);
     } else if address_type.eq("Kusama") {
         return check_ss58(address);
@@ -301,7 +301,7 @@ fn check_h160(address: &String) -> Result<(), String> {
     match ethereum_types::H160::from_str(address) {
         Ok(_) => return Ok(()),
         Err(e) => {
-            print!("Error while parsing moonriver address: {}", e.to_string());
+            print!("Error while parsing Moonbeam address: {}", e.to_string());
             return Err("Invalid H160 address provided".to_string());
         }
     }
