@@ -15,6 +15,7 @@ use sp_core::crypto::{AccountId32, Ss58Codec};
 
 pub use crate::data;
 use crate::Handler;
+
 use ethereum_types;
 
 use self::data::DbClient;
@@ -48,7 +49,7 @@ pub async fn sign(
 
     let filtered_roles = user_roles
         .to_owned()
-        .filter(|&role_name| handler.is_valid_role(&role_name))
+      //  .filter(|&role_name| handler.is_valid_role(&role_name))
         .collect::<Vec<&std::string::String>>();
 
     let user_roles = user_roles.collect::<Vec<&std::string::String>>();
@@ -83,9 +84,12 @@ pub async fn sign(
 }
 
 pub async fn register(
+    ctx: &Context,
     command: &ApplicationCommandInteraction,
     db_client: &DbClient,
+    handler: &Handler,
 ) -> Result<(), String> {
+
     let address_type = command
         .data
         .options
@@ -102,6 +106,35 @@ pub async fn register(
         .resolved
         .as_ref()
         .expect("Expected address object");
+        let member = &command
+        .member
+        .as_ref()
+        .expect("Expected user to be member of guild");
+        let roles = command
+            .guild_id
+            .expect("Expected command to come from the guild")
+            .roles(&ctx.http)
+            .await
+            .unwrap();
+        let user_roles = &member.roles;
+        let user_roles = user_roles.iter().map(|role_id| {
+            &roles
+                .get(role_id)
+                .expect("expected role id in the guild")
+                .name
+        });
+        println!("User roles: {:?}", user_roles);
+        let filtered_roles = user_roles
+            .to_owned()
+            .filter(|&role_name| handler.is_valid_role(&role_name))
+            .collect::<Vec<&std::string::String>>();
+        println!("Filtered roles: {:?}", filtered_roles);
+        let user_roles = user_roles.collect::<Vec<&std::string::String>>();
+    
+        if filtered_roles.len() != 1 {
+            let msg = format!("You do not have proper role to use this command." );
+            return Err(msg);
+        }
     if let ApplicationCommandInteractionDataOptionValue::String(address_type) = address_type {
         if let ApplicationCommandInteractionDataOptionValue::String(address) = address {
             match verify(address_type, address) {
@@ -145,6 +178,7 @@ const MSG_WRAP_PREFIX: &str = "<Bytes>";
 const MSG_WRAP_POSTFIX: &str = "</Bytes>";
 
 fn check_signature(ss58_add: &String, h160_add: &String, signature: &String) -> Result<(), String> {
+
     let h160_add = if h160_add.starts_with("0x") {
         h160_add[2..].to_string()
     } else {

@@ -7,19 +7,36 @@ pub struct DbClient {
 }
 
 impl DbClient {
+
+
+    pub async fn check_kanaria(
+        &self,
+        address: String,
+    ) -> Option<Stderr> {
+
+        sqlx::query!(
+            "select * from (select (1) as address) KANARIA where address == ?",  
+            //"INSERT OR REPLACE INTO users (user_id, user_tag, address_type, address, roles, avatar, create_date, update_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
+            address)
+        .fetch_one(&self.database)
+        .await
+        .unwrap();
+        None
+    }
+    
     pub async fn insert_signed(
         &self,
         user_id: String,
         user_tag: String,
         ksm_address: String,
-        movr_address: String,
+        glmr_address: String,
         roles: String,
         avatar: String,
     ) -> Option<Stderr> {
 
         sqlx::query!(
-            "INSERT OR REPLACE INTO signed (user_id, user_tag, ksm_address, movr_address, roles, avatar, create_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))",
-             user_id, user_tag, ksm_address, movr_address, roles, avatar)
+            "INSERT OR REPLACE INTO signed (user_id, user_tag, ksm_address, glmr_address, roles, avatar, create_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))",
+             user_id, user_tag, ksm_address, glmr_address, roles, avatar)
         .execute(&self.database)
         .await
         .unwrap();
@@ -36,7 +53,7 @@ impl DbClient {
         roles: String,
         avatar: String,
     ) -> Option<Stderr> {
-
+       // DbClient::check_kanaria(&self,(&"CaZaD5cLvFTnK6PGZ9fbvvwZwU7pgNWL4NmLehHVmpDaEmf").to_string());
         sqlx::query!(
             "INSERT OR REPLACE INTO users (user_id, user_tag, address_type, address, roles, avatar, create_date, update_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
              user_id, user_tag, address_type, address, roles, avatar)
@@ -61,10 +78,10 @@ pub async fn init(filename: String) -> DbClient {
         .expect("Couldn't connect to database");
 
     // Run migrations, which updates the database's schema to the latest version.
-    sqlx::migrate!("./migrations")
-        .run(&database)
-        .await
-        .expect("Couldn't run database migrations");
+  //  sqlx::migrate!("./migrations")
+    //    .run(&database)
+    //    .await
+    //    .expect("Couldn't run database migrations");
 
     DbClient { database }
 }

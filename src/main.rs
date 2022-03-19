@@ -30,7 +30,7 @@ impl EventHandler for Handler {
                     Ok(_) => "Your details have been recorded.".to_string(),
                     Err(e) => format!("{} {}", e, ERROR_POSTFIX),
                 },
-                "wallet" => match wallet::register(&command, &self.db_client).await {
+                "wallet" => match wallet::register(&ctx, &command, &self.db_client, &self).await {
                     Ok(_) => "Your details have been recorded.".to_string(),
                     Err(e) => e,
                 },
