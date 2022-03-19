@@ -5,10 +5,8 @@ use std::{io::Stderr, str::FromStr};
 
 use serenity::{
     client::Context,
-    model::{
-        interactions::application_command::{
-            ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
-        },
+    model::interactions::application_command::{
+        ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
     },
 };
 use sp_core::crypto::{AccountId32, Ss58Codec};
@@ -30,9 +28,9 @@ pub async fn sign(
     let signature = extract_option_str(command, 2).unwrap();
 
     let member = &command
-    .member
-    .as_ref()
-    .expect("Expected user to be member of guild");
+        .member
+        .as_ref()
+        .expect("Expected user to be member of guild");
     let roles = command
         .guild_id
         .expect("Expected command to come from the guild")
@@ -47,16 +45,7 @@ pub async fn sign(
             .name
     });
 
-    let filtered_roles = user_roles
-        .to_owned()
-      //  .filter(|&role_name| handler.is_valid_role(&role_name))
-        .collect::<Vec<&std::string::String>>();
-
     let user_roles = user_roles.collect::<Vec<&std::string::String>>();
-
-    if filtered_roles.len() != 1 {
-        return Err("You do not have proper role to use this command.".to_string());
-    }
 
     match check_ss58(&ksm) {
         Ok(_) => (),
@@ -89,7 +78,6 @@ pub async fn register(
     db_client: &DbClient,
     handler: &Handler,
 ) -> Result<(), String> {
-
     let address_type = command
         .data
         .options
@@ -106,49 +94,59 @@ pub async fn register(
         .resolved
         .as_ref()
         .expect("Expected address object");
-        let member = &command
+    let member = &command
         .member
         .as_ref()
         .expect("Expected user to be member of guild");
-        let roles = command
-            .guild_id
-            .expect("Expected command to come from the guild")
-            .roles(&ctx.http)
-            .await
-            .unwrap();
-        let user_roles = &member.roles;
-        let user_roles = user_roles.iter().map(|role_id| {
-            &roles
-                .get(role_id)
-                .expect("expected role id in the guild")
-                .name
-        });
-       // println!("User roles: {:?}", user_roles);
-        let filtered_roles = user_roles
-            .to_owned()
-            .filter(|&role_name| handler.is_valid_role(&role_name))
-            .collect::<Vec<&std::string::String>>();
-        //println!("Filtered roles: {:?}", filtered_roles);
-        let user_roles = user_roles.collect::<Vec<&std::string::String>>();
-    
-        if filtered_roles.len() != 1 {
-            let msg = format!("You do not have proper role to use this command." );
-            return Err(msg);
-        }
+    let roles = command
+        .guild_id
+        .expect("Expected command to come from the guild")
+        .roles(&ctx.http)
+        .await
+        .unwrap();
+    let user_roles = &member.roles;
+    let user_roles = user_roles.iter().map(|role_id| {
+        &roles
+            .get(role_id)
+            .expect("expected role id in the guild")
+            .name
+    });
+    // println!("User roles: {:?}", user_roles);
+    let filtered_roles = user_roles
+        .to_owned()
+        .filter(|&role_name| handler.is_valid_role(&role_name))
+        .collect::<Vec<&std::string::String>>();
+    //println!("Filtered roles: {:?}", filtered_roles);
+    let user_roles = user_roles.collect::<Vec<&std::string::String>>();
+
+    if filtered_roles.len() != 1 {
+        let msg = format!("You do not have proper role to use this command.");
+        return Err(msg);
+    }
     if let ApplicationCommandInteractionDataOptionValue::String(address_type) = address_type {
         if let ApplicationCommandInteractionDataOptionValue::String(address) = address {
             match verify(address_type, address) {
-                Ok(_) => match insert_non_signed(
-                    db_client,
-                    command,
-                    address_type.to_string(),
-                    address.to_string(),
-                )
-                .await
-                {
-                    None => return Ok(()),
-                    Some(_) => return Err("Could not save the record".to_string()),
-                },
+                Ok(_) => {
+                    if address_type.eq("Kusama") {
+                        match db_client.check_kanaria(address.to_string()).await {
+                            Ok(_) => (),
+                            
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    match insert_non_signed(
+                        db_client,
+                        command,
+                        address_type.to_string(),
+                        address.to_string(),
+                        user_roles,
+                    )
+                    .await
+                    {
+                        None => return Ok(()),
+                        Some(_) => return Err("Could not save the record".to_string()),
+                    }
+                }
                 Err(e) => return Err(e),
             }
         }
@@ -178,7 +176,6 @@ const MSG_WRAP_PREFIX: &str = "<Bytes>";
 const MSG_WRAP_POSTFIX: &str = "</Bytes>";
 
 fn check_signature(ss58_add: &String, h160_add: &String, signature: &String) -> Result<(), String> {
-
     let h160_add = if h160_add.starts_with("0x") {
         h160_add[2..].to_string()
     } else {
@@ -269,12 +266,8 @@ async fn insert_non_signed(
     command: &ApplicationCommandInteraction,
     address_type: String,
     address: String,
+    roles: Vec<&String>,
 ) -> Option<Stderr> {
-    let roles = &command
-        .member
-        .as_ref()
-        .expect("Expected the bot to be in guild")
-        .roles;
     let avatar = &command.user.avatar_url().unwrap_or_default();
     db_client
         .insert_non_signed(
