@@ -1,0 +1,5 @@
+-- Add migration script here
+CREATE TABLE KANARIA (
+    KSM_ADDRESS TEXT NOT NULL,
+    PRIMARY KEY (KSM_ADDRESS)
+)
