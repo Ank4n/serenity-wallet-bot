@@ -84,7 +84,7 @@ impl EventHandler for Handler {
                             option
                                 .name("signature")
                                 .description(
-                                    "MOVR address signed as a message with your KSM wallet",
+                                    "GLMR address signed as a message with your KSM wallet",
                                 )
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
