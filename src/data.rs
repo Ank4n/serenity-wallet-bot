@@ -12,16 +12,18 @@ impl DbClient {
     pub async fn check_kanaria(
         &self,
         address: String,
-    ) -> Option<Stderr> {
+    ) -> Result<(), String> {
 
-        sqlx::query!(
-            "select * from (select (1) as address) KANARIA where address == ?",  
-            //"INSERT OR REPLACE INTO users (user_id, user_tag, address_type, address, roles, avatar, create_date, update_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
+        let kanaria = sqlx::query!(
+            "select * from KANARIA where ksm_address = ?",  
             address)
         .fetch_one(&self.database)
-        .await
-        .unwrap();
-        None
+        .await;
+        
+        match kanaria {
+            Ok(_) => Ok(()),
+            Err(_) => Err("Address is not kanaria whitelist".to_string()),
+        }
     }
     
     pub async fn insert_signed(
@@ -53,7 +55,6 @@ impl DbClient {
         roles: String,
         avatar: String,
     ) -> Option<Stderr> {
-       // DbClient::check_kanaria(&self,(&"CaZaD5cLvFTnK6PGZ9fbvvwZwU7pgNWL4NmLehHVmpDaEmf").to_string());
         sqlx::query!(
             "INSERT OR REPLACE INTO users (user_id, user_tag, address_type, address, roles, avatar, create_date, update_date) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
              user_id, user_tag, address_type, address, roles, avatar)
