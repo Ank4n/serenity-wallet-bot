@@ -45,16 +45,7 @@ pub async fn sign(
             .name
     });
 
-    let filtered_roles = user_roles
-        .to_owned()
-        //  .filter(|&role_name| handler.is_valid_role(&role_name))
-        .collect::<Vec<&std::string::String>>();
-
     let user_roles = user_roles.collect::<Vec<&std::string::String>>();
-
-    if filtered_roles.len() != 1 {
-        return Err("You do not have proper role to use this command.".to_string());
-    }
 
     match check_ss58(&ksm) {
         Ok(_) => (),
