@@ -136,7 +136,7 @@ async fn main() {
     // user needs this role before they can use /sign command
     let pre_role = dotenv::var("PRE_ROLE").expect("Expected pre role in the environment");
     // user is assigned this role after successfully using the /sign command
-    let post_role = dotenv::var("POST_ROLE").expect("Expected post role in the environment");
+    let post_role = dotenv::var("POST_ROLE_ID").expect("Expected post role in the environment");
 
     let handler = Handler { db_client, pre_role, post_role };
 

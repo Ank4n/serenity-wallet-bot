@@ -5,8 +5,12 @@ use std::{io::Stderr, str::FromStr};
 
 use serenity::{
     client::Context,
-    model::interactions::application_command::{
-        ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
+    http::CacheHttp,
+    model::{
+        id::RoleId,
+        interactions::application_command::{
+            ApplicationCommandInteraction, ApplicationCommandInteractionDataOptionValue,
+        },
     },
 };
 use sp_core::crypto::{AccountId32, Ss58Codec};
@@ -121,7 +125,6 @@ pub async fn register(
         .to_owned()
         .filter(|&role_name| handler.is_valid_role(&role_name))
         .collect::<Vec<&std::string::String>>();
-    //println!("Filtered roles: {:?}", filtered_roles);
     let user_roles = user_roles.collect::<Vec<&std::string::String>>();
 
     if filtered_roles.len() != 1 {
@@ -141,7 +144,22 @@ pub async fn register(
                     )
                     .await
                     {
-                        None => return Ok(()),
+                        None => {
+                            if address_type.eq("Kusama") {
+                                let mem = command.member.as_ref().unwrap();
+                                let role_id =
+                                    RoleId::from_str(&handler.post_role().to_string()).unwrap();
+                                match mem.to_owned().add_role(&ctx.http(), role_id).await {
+                                    Ok(_) => return Ok(()),
+                                    Err(_) => {
+                                        return Err("Results recorded but could not apply new role"
+                                            .to_string())
+                                    }
+                                }
+                            } else {
+                                return Ok(());
+                            }
+                        }
                         Some(_) => return Err("Could not save the record".to_string()),
                     }
                 }
