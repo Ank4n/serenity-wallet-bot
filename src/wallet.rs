@@ -62,6 +62,11 @@ pub async fn sign(
         Err(e) => return Err(e),
     }
 
+    match handler.db_client().check_kanaria(ksm.to_string()).await {
+        Ok(_) => (),
+        Err(e) => return Err(e),
+    }
+
     match insert_signed(&handler.db_client(), command, ksm, movr, user_roles).await {
         Ok(_) => (),
         Err(_) => {
@@ -127,13 +132,6 @@ pub async fn register(
         if let ApplicationCommandInteractionDataOptionValue::String(address) = address {
             match verify(address_type, address) {
                 Ok(_) => {
-                    if address_type.eq("Kusama") {
-                        match db_client.check_kanaria(address.to_string()).await {
-                            Ok(_) => (),
-                            
-                            Err(e) => return Err(e),
-                        }
-                    }
                     match insert_non_signed(
                         db_client,
                         command,
