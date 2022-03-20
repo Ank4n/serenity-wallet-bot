@@ -22,7 +22,7 @@ impl DbClient {
         
         match kanaria {
             Ok(_) => Ok(()),
-            Err(_) => Err("Address is not kanaria whitelist".to_string()),
+            Err(_) => Err("Address is not on the Kanaria whitelist".to_string()),
         }
     }
     

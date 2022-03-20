@@ -49,12 +49,12 @@ pub async fn sign(
 
     match check_ss58(&ksm) {
         Ok(_) => (),
-        Err(_) => return Err("Invalid ksm address".to_string()),
+        Err(_) => return Err("Invalid KSM address".to_string()),
     };
 
     match check_h160(&movr) {
         Ok(_) => (),
-        Err(_) => return Err("Invalid movr address".to_string()),
+        Err(_) => return Err("Invalid GLMR address".to_string()),
     };
 
     match check_signature(&ksm, &movr, &signature) {
@@ -201,7 +201,7 @@ fn check_signature(ss58_add: &String, h160_add: &String, signature: &String) -> 
 
     match check_h160(&format!("0x{}", &h160_add)) {
         Ok(_) => (),
-        Err(_) => return Err("Movr address is not valid".to_string()),
+        Err(_) => return Err("GLMR address is not valid".to_string()),
     }
 
     let sig: Vec<u8> = match hex::FromHex::from_hex(signature) {
