@@ -68,21 +68,21 @@ impl EventHandler for Handler {
                         .description("Register and verify wallet")
                         .create_option(|option| {
                             option
-                                .name("Kusama address")
+                                .name("kusama_address")
                                 .description("Kusama wallet address")
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
                         })
                         .create_option(|option| {
                             option
-                                .name("Moonbeam address")
+                                .name("moonbeam_address")
                                 .description("Moonbeam wallet address")
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
                         })
                         .create_option(|option| {
                             option
-                                .name("Signature")
+                                .name("signature")
                                 .description(
                                     "Signature of your GLMR address using your KSM account",
                                 )
