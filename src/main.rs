@@ -68,23 +68,23 @@ impl EventHandler for Handler {
                         .description("Register and verify wallet")
                         .create_option(|option| {
                             option
-                                .name("kusama_address")
+                                .name("Kusama address")
                                 .description("Kusama wallet address")
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
                         })
                         .create_option(|option| {
                             option
-                                .name("moonbeam_address")
+                                .name("Moonbeam address")
                                 .description("Moonbeam wallet address")
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
                         })
                         .create_option(|option| {
                             option
-                                .name("signature")
+                                .name("Signature")
                                 .description(
-                                    "GLMR address signed as a message with your KSM wallet",
+                                    "Signature of your GLMR address using your KSM account",
                                 )
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
@@ -100,8 +100,9 @@ impl EventHandler for Handler {
                                 .description("Type of wallet")
                                 .kind(ApplicationCommandOptionType::String)
                                 .required(true)
-                                .add_string_choice("Moonbeam", "Moonbeam")
                                 .add_string_choice("Kusama", "Kusama")
+                                .add_string_choice("Moonbeam", "Moonbeam")
+                                .add_string_choice("Moonriver", "Moonriver")
                         })
                         .create_option(|option| {
                             option
