@@ -28,7 +28,7 @@ pub async fn sign(
     handler: &Handler,
 ) -> Result<(), String> {
     let ksm = extract_option_str(command, 0).unwrap();
-    let movr = extract_option_str(command, 1).unwrap();
+    let evm = extract_option_str(command, 1).unwrap();
     let signature = extract_option_str(command, 2).unwrap();
 
     let member = &command
@@ -56,12 +56,12 @@ pub async fn sign(
         Err(_) => return Err("Invalid KSM address".to_string()),
     };
 
-    match check_h160(&movr) {
+    match check_h160(&evm) {
         Ok(_) => (),
         Err(_) => return Err("Invalid GLMR address".to_string()),
     };
 
-    match check_signature(&ksm, &movr, &signature) {
+    match check_signature(&ksm, &evm, &signature) {
         Ok(_) => (),
         Err(e) => return Err(e),
     }
@@ -71,7 +71,7 @@ pub async fn sign(
         Err(e) => return Err(e),
     }
 
-    match insert_signed(&handler.db_client(), command, ksm, movr, user_roles).await {
+    match insert_signed(&handler.db_client(), command, ksm, evm, user_roles).await {
         Ok(_) => (),
         Err(_) => {
             return Err("Something went wrong while trying to record your details".to_string())
@@ -254,7 +254,7 @@ async fn insert_signed(
     db_client: &DbClient,
     command: &ApplicationCommandInteraction,
     ksm: String,
-    movr: String,
+    evm: String,
     roles: Vec<&String>,
 ) -> Result<(), String> {
     let avatar = &command.user.avatar_url().unwrap_or_default();
@@ -263,7 +263,7 @@ async fn insert_signed(
             command.user.id.to_string(),
             command.user.tag(),
             ksm,
-            format!("0x{}", movr),
+            format!("0x{}", evm),
             format!("{:?}", roles),
             avatar.to_string(),
         )
