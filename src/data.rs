@@ -1,7 +1,5 @@
 use std::io::Stderr;
 
-
-
 pub struct DbClient {
     database: sqlx::SqlitePool,
 }
