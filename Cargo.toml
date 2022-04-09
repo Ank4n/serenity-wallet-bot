@@ -22,3 +22,4 @@ schnorrkel = "0.10.2"
 ethereum-types = "0.13.1"
 hex-literal = "0.3.4"
 sqlx = { version = "0.5.7", features = ["runtime-tokio-rustls", "sqlite", "offline"] }
+ed25519-dalek = { version = "1.0.0-pre.4", features = [] }

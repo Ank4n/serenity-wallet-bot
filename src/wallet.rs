@@ -1,3 +1,4 @@
+use ed25519_dalek::{PublicKey as EdPublicKey, Signature as EdSignature, Verifier as _};
 use schnorrkel::keys::*;
 use schnorrkel::sign::Signature;
 use schnorrkel::signing_context;
@@ -215,8 +216,6 @@ fn check_signature(ss58_add: &String, h160_add: &String, signature: &String) -> 
     msg.append(&mut unwrapped_msg);
     msg.append(&mut msg_postfix);
 
-    let context = signing_context(b"substrate");
-
     match check_h160(&format!("0x{}", &h160_add)) {
         Ok(_) => (),
         Err(_) => return Err("GLMR address is not valid".to_string()),
@@ -227,24 +226,55 @@ fn check_signature(ss58_add: &String, h160_add: &String, signature: &String) -> 
         Err(_) => return Err("Input signature is not a hex.".to_string()),
     };
 
-    let sig = match Signature::from_bytes(sig.as_slice()) {
-        Ok(sign) => sign,
-        Err(_) => return Err("Input signature could not be parsed.".to_string()),
-    };
-
     let acc = match AccountId32::from_string_with_version(ss58_add) {
         Ok(acc32) => acc32,
         Err(_) => return Err("Input substrate address not valid.".to_string()),
     };
 
-    let pk = match PublicKey::from_bytes(acc.0.as_ref()) {
+    let ss58_check = check_ss58_signature(acc.0.as_ref(), &msg, sig.as_slice());
+    let ed_check = check_ed_signature(acc.0.as_ref(), &msg, sig.as_slice());
+
+    if ss58_check.is_ok() || ed_check.is_ok() {
+        return Ok(());
+    }
+
+    ss58_check
+}
+
+fn check_ss58_signature(pubkey: &[u8], message: &[u8], signature: &[u8]) -> Result<(), String> {
+    let sig = match Signature::from_bytes(signature) {
+        Ok(sign) => sign,
+        Err(_) => return Err("Input signature could not be parsed.".to_string()),
+    };
+
+    let pk = match PublicKey::from_bytes(pubkey) {
+        Ok(some_pk) => some_pk,
+        Err(_) => {
+            return Err("Something went wrong while trying to parse substrate address.".to_string())
+        }
+    };
+    let context = signing_context(b"substrate");
+
+    match pk.verify(context.bytes(&message), &sig) {
+        Ok(_) => return Ok(()),
+        Err(_) => return Err("Signature could not be verified.".to_string()),
+    }
+}
+
+fn check_ed_signature(pubkey: &[u8], message: &[u8], signature: &[u8]) -> Result<(), String> {
+    let sig = match EdSignature::from_bytes(signature) {
+        Ok(sign) => sign,
+        Err(_) => return Err("Input signature could not be parsed.".to_string()),
+    };
+
+    let pk = match EdPublicKey::from_bytes(pubkey) {
         Ok(some_pk) => some_pk,
         Err(_) => {
             return Err("Something went wrong while trying to parse substrate address.".to_string())
         }
     };
 
-    match pk.verify(context.bytes(&msg), &sig) {
+    match pk.verify(&message, &sig) {
         Ok(_) => return Ok(()),
         Err(_) => return Err("Signature could not be verified.".to_string()),
     }
@@ -298,7 +328,7 @@ async fn insert_non_signed(
 }
 
 fn verify(address_type: &String, address: &String) -> Result<(), String> {
-    if address_type.eq("Moonbeam") || address_type.eq("Moonriver")  {
+    if address_type.eq("Moonbeam") || address_type.eq("Moonriver") {
         return check_h160(address);
     } else if address_type.eq("Kusama") {
         return check_ss58(address);
@@ -310,7 +340,10 @@ fn check_h160(address: &String) -> Result<(), String> {
     match ethereum_types::H160::from_str(address) {
         Ok(_) => return Ok(()),
         Err(e) => {
-            print!("Error while parsing Moonbeam/Moonriver type address: {}", e.to_string());
+            print!(
+                "Error while parsing Moonbeam/Moonriver type address: {}",
+                e.to_string()
+            );
             return Err("Invalid H160 address provided".to_string());
         }
     }
@@ -348,4 +381,14 @@ fn test_signature_wrong_signature() {
     let signature = &"367b20ee54a52ba6636e8f41f7aa984a47916ef17a119d441d29a97ac6ebfa6921f649cd3a02084df393a6614f3ac699aca98bdb5ccf5504dd74fd6e3f6dd48a".to_string();
     let check = check_signature(ss58_address, h160_add, signature);
     assert!(check.is_err(), "Signature was expected to fail but passed");
+}
+
+#[test]
+fn test_signature_ed25519() {
+    let ss58_address = &"EYuduchUnaQwZpQeLSHfbizV7myJ5XAx3Fyo1RZPamiBiyu".to_string();
+    let h160_add = &"b794f5ea0ba39494ce839613fffba74279579268".to_string();
+    let signature = &"fb275c30af9eceb9e0370f80896c223fdc728e590bc5deefb776f78ac914c8b3be21800a9f959bbb7e03ce4b745965c82261dfbcc3d7c7906a9bd7a4f855380a".to_string();
+
+    let check = check_signature(ss58_address, h160_add, signature);
+    assert!(check.is_ok(), "err: {}", check.unwrap_err());
 }
